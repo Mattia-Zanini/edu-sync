@@ -1,0 +1,24 @@
+feat: gestione completa dei profili, correzioni al logging e aggiornamento alla v0.4.0
+
+Questo commit introduce importanti miglioramenti alla gestione dei profili e amplia significativamente la documentazione.
+
+Aggiunto
+- Comandi CLI per la gestione dei profili: Aggiunti i sottocomandi list, update e remove per consentire la gestione interattiva completa degli account Moodle direttamente dal terminale senza la modifica manuale del file TOML.
+- Aggiornamenti dinamici dei percorsi: Il sottocomando update ora consente di modificare la directory di download di destinazione utilizzando il flag --path.
+- Flag di versione: Riabilitato il flag --version (-V) aggiungendo l'attributo version alla configurazione del parser clap.
+- Output della guida dinamico: Il comando -h/--help ora stampa i percorsi assoluti di runtime dei file di configurazione (.toml) e di log, includendo il loro stato di esistenza corrente sul disco ([Esiste] / [Non trovato]).
+- Conformità GPLv3: Aggiunti gli avvisi di modifica obbligatori alle intestazioni di main.rs, content.rs e util.rs.
+- Gitignore per macOS e Rust: Aggiornato .gitignore per coprire .DS_Store e vari artefatti di compilazione Rust/Cargo.
+
+Cambiato
+- Aggiornamento della versione: Aggiornata la versione del progetto a 0.4.0 in tutti i crate del workspace (edu-sync, edu-sync-cli, edu-ws, edu-ws-derive) per riflettere le nuove funzionalità della CLI.
+- Correzione del logging: Cambiata la destinazione del log tracing-appender dalla directory corrente (.) alla directory dei dati dell'applicazione standard del sistema per prevenire blocchi (Os { code: 2 }) durante l'esecuzione globale tramite cargo install.
+- Gestione dei Timeout di Rete (Sync Fix): Aggiunto un timeout di connessione (15s) al client HTTP `reqwest` e un timeout per lo scaricamento a chunk dei file (30s). Questo impedisce al comando di sincronizzazione di bloccarsi all'infinito in caso di disconnessioni o server non responsivo, permettendo al programma di terminare correttamente restituendo un errore.
+- Documentazione: Rivisto ampiamente README.md:
+  - Aggiunta la documentazione completa e strutturata per i nuovi sottocomandi di Gestione Account e Sincronizzazione.
+  - Aggiunto un avviso per lo script cleanup_moodle.py spiegando il suo comportamento distruttivo per le sincronizzazioni future.
+  - Rimossi i badge CI obsoleti e gli esempi ridondanti.
+  - Sostituite le istruzioni di installazione AUR/binarie obsolete con le istruzioni di installazione Cargo.
+
+Rimosso
+- Rimosso l'import non utilizzato Parser in main.rs per garantire una compilazione completamente pulita senza avvisi del compilatore.

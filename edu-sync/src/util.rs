@@ -1,3 +1,4 @@
+// Modificato il 2026-07-15: Aggiunto timeout di connessione al client reqwest (conformità GPLv3).
 use std::{borrow::Cow, ffi::OsStr, mem, path::PathBuf, sync::OnceLock};
 
 use directories::ProjectDirs;
@@ -15,7 +16,12 @@ pub fn project_dirs() -> &'static ProjectDirs {
 pub fn shared_http() -> reqwest::Client {
     static SHARED: OnceLock<reqwest::Client> = OnceLock::new();
 
-    SHARED.get_or_init(reqwest::Client::new).clone()
+    SHARED.get_or_init(|| {
+        reqwest::Client::builder()
+            .connect_timeout(std::time::Duration::from_secs(15))
+            .build()
+            .unwrap()
+    }).clone()
 }
 
 // From https://github.com/rust-lang/rust/blob/1.78.0/library/std/src/path.rs#L342-L364

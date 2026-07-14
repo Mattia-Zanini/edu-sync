@@ -1,6 +1,6 @@
 [package]
 name = "edu-sync-cli"
-version = "0.3.2"
+version = "0.4.0"
 authors = ["Martin Kröning <mkroening@posteo.net>"]
 edition = "2021"
 description = "Moodle synchronization utility (CLI)."
@@ -23,3 +23,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 url = "2.2"
 clap_complete = { version = "4.5.47", features = ["unstable-dynamic"] }
+tracing-appender = "0.2.5"

@@ -1,3 +1,4 @@
+// Modificato il 2026-07-15: Aggiunto timeout di rete per il download a chunk dei file (conformità GPLv3).
 use std::{
     borrow::Cow,
     cmp::Ordering,
@@ -165,7 +166,17 @@ impl FileDownload {
             .await
             .unwrap();
         let mut progress = 0;
-        while let Some(chunk) = response.chunk().await.unwrap() {
+        while let Some(chunk) = match tokio::time::timeout(
+            std::time::Duration::from_secs(30),
+            response.chunk(),
+        )
+        .await
+        {
+            Ok(Ok(Some(chunk))) => Some(chunk),
+            Ok(Ok(None)) => None,
+            Ok(Err(e)) => return Err(io::Error::new(io::ErrorKind::Other, e)),
+            Err(_) => return Err(io::Error::new(io::ErrorKind::TimedOut, "network timeout")),
+        } {
             file.write_all(&chunk).await?;
             progress += chunk.len() as u64;
             report_progress(progress);
