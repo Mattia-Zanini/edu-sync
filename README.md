@@ -128,11 +128,12 @@ The project includes a Python utility script, [`cleanup_moodle.py`](cleanup_mood
 When Edu Sync downloads files from Moodle, they often contain numerical Moodle IDs, invalid characters, or are nested in redundant folders. This script cleans the folder structure to make it more human-readable and accessible.
 
 ### Result / What it does
-1. **Removes Moodle IDs:** Strips the numerical ID prefixes from file and directory names.
+1. **Removes Moodle IDs:** Strips the numerical ID prefixes from file and directory names (safely limited to numbers of at least 4 digits without leading zeros, to avoid false positives on legitimate dates or numbers).
 2. **Converts HTML Links:** Automatically identifies `.html` files that are simply Moodle redirects/links, extracts the target URL, and converts the file to a plain `.txt` file containing the link.
 3. **Sanitizes Names:** Removes invalid characters (`< > : " / \ | ? *`) to ensure native compatibility across Windows, macOS, and Linux.
 4. **Flattens Directories:** If a directory contains only a single item (one file or subfolder), the script moves that item up one level and deletes the empty directory.
-5. **Smart Conflict Resolution:** If two files end up with the same name after cleaning, the script intelligently appends the original Moodle ID (or a numeric counter) to prevent overwriting.
+5. **Removes Empty Directories:** Automatically deletes any completely empty folders left behind.
+6. **Smart Conflict Resolution:** If two files end up with the same name after cleaning, the script intelligently appends the original Moodle ID (or a numeric counter) to prevent overwriting.
 
 > [!WARNING]
 > While using this script is highly recommended for achieving a much cleaner and more readable organization of your downloaded courses, **it will compromise future synchronization**.
@@ -142,6 +143,13 @@ When Edu Sync downloads files from Moodle, they often contain numerical Moodle I
 Run the script passing the path to your downloaded Moodle folder as an argument:
 ```bash
 python3 cleanup_moodle.py ~/download-dir
+```
+
+By default, the script includes a safety check to only strip leading numbers if they are at least 4 digits long and do not start with a zero. This prevents the script from accidentally removing legitimate parts of a filename, such as a date (e.g., "12 maggio") or a chapter number (e.g., "09 - Appunti"). 
+
+If you want to override this behavior and force the script to remove **any** number at the beginning of a file or folder name, you can use the `--strip-all-numbers` flag:
+```bash
+python3 cleanup_moodle.py --strip-all-numbers ~/download-dir
 ```
 
 ## Licensing

@@ -69,15 +69,17 @@ def get_unique_path(parent_dir, desired_name, original_name):
             return target_path
         counter += 1
 
-def cleanup_directory(root_dir):
+def cleanup_directory(root_dir, strip_all_numbers=False):
     """
     Attraversa la directory partendo dalle foglie (bottom-up) per rinominare 
     prima il contenuto e poi i contenitori, evitando di rompere i percorsi.
-    Inoltre, appiattisce le cartelle che contengono 1 solo elemento.
+    Inoltre, appiattisce le cartelle che contengono 1 solo elemento
+    e rimuove eventuali cartelle vuote.
     """
     files_renamed = 0
     dirs_renamed = 0
     items_moved = 0
+    empty_dirs_removed = 0
 
     for dirpath, dirnames, filenames in os.walk(root_dir, topdown=False):
         
@@ -105,7 +107,12 @@ def cleanup_directory(root_dir):
                         if check_and_convert_html(old_path):
                             ext = '.txt'
                 
-                match = re.match(r'^(\d+)\s+(.*)$', name)
+                if strip_all_numbers:
+                    match = re.match(r'^(\d+)\s+(.*)$', name)
+                else:
+                    # Consideriamo ID di Moodle solo i numeri di almeno 4 cifre senza zeri iniziali.
+                    # Questo previene falsi positivi (es. "12 maggio", "09 - Appunti", ecc.)
+                    match = re.match(r'^([1-9]\d{3,})\s+(.*)$', name)
                 if match:
                     item_id = match.group(1)
                     clean_base = sanitize_name(match.group(2).strip())
@@ -162,11 +169,15 @@ def cleanup_directory(root_dir):
         process_items(filenames, is_dir=False)
         process_items(dirnames, is_dir=True)
 
-        # 3. Appiattimento: se la cartella corrente ha 1 solo elemento, lo sposta su e si elimina
+        # 3. Appiattimento e pulizia cartelle vuote
         if dirpath != root_dir:
             try:
                 current_items = [f for f in os.listdir(dirpath) if not f.startswith('.')]
-                if len(current_items) == 1:
+                if len(current_items) == 0:
+                    shutil.rmtree(dirpath)
+                    empty_dirs_removed += 1
+                    print(f"Delete: cartella vuota '{os.path.basename(dirpath)}' eliminata\n")
+                elif len(current_items) == 1:
                     single_item = current_items[0]
                     old_item_path = os.path.join(dirpath, single_item)
                     parent_dir = os.path.dirname(dirpath)
@@ -182,7 +193,7 @@ def cleanup_directory(root_dir):
             except Exception as e:
                 pass
 
-    return files_renamed, dirs_renamed, items_moved
+    return files_renamed, dirs_renamed, items_moved, empty_dirs_removed
 
 def main():
     parser = argparse.ArgumentParser(
@@ -200,16 +211,17 @@ Esempi di utilizzo:
         Pulisce la cartella usando la scorciatoia home (~), anche se messa tra virgolette.
 
 Cosa fa il programma:
-  1. Rimuove l'ID numerico di Moodle all'inizio dei file e cartelle.
+  1. Rimuove l'ID numerico di Moodle all'inizio dei file e cartelle (solo se composto da almeno 4 cifre senza zeri iniziali, per evitare falsi positivi come date o numeri di lezione). Usare --strip-all-numbers per disabilitare questo controllo.
   2. Analizza i file .html: se sono semplici redirect/link creati da edu-sync, 
      estrae l'URL in chiaro e converte l'estensione in .txt. Le vere pagine HTML
      strutturate vengono invece preservate.
   3. Sanitizza i nomi per renderli compatibili in modo nativo su Linux, macOS e Windows.
   4. Appiattisce le cartelle contenenti un solo file/sottocartella, spostando il contenuto
      nella directory madre ed eliminando la cartella vuota.
-  5. Gestione conflitti intelligente: se due risorse finiscono per avere lo stesso nome, 
+  5. Rimuove eventuali cartelle completamente vuote.
+  6. Gestione conflitti intelligente: se due risorse finiscono per avere lo stesso nome, 
      il programma utilizzerà l'ID numerico rimosso e lo accoderà alla fine (es. nome [118586].pdf).
-  6. Sicurezza aggiuntiva: se anche i nomi post-spostamento ID dovessero entrare 
+  7. Sicurezza aggiuntiva: se anche i nomi post-spostamento ID dovessero entrare 
      in conflitto, il file verrà preservato aggiungendo un contatore (_1, _2).
 """,
         formatter_class=argparse.RawTextHelpFormatter
@@ -218,6 +230,12 @@ Cosa fa il programma:
     parser.add_argument(
         "path",
         help="Percorso relativo o assoluto della cartella da pulire"
+    )
+    
+    parser.add_argument(
+        "--strip-all-numbers",
+        action="store_true",
+        help="Disabilita il controllo di sicurezza e rimuove QUALSIASI numero all'inizio di file/cartelle."
     )
     
     args = parser.parse_args()
@@ -230,8 +248,8 @@ Cosa fa il programma:
         sys.exit(1)
         
     print(f"Inizio pulizia della cartella: {target_dir}\n")
-    f_count, d_count, m_count = cleanup_directory(target_dir)
-    print(f"Pulizia completata! Rinominati {f_count} file e {d_count} cartelle. Effettuati {m_count} spostamenti di appiattimento.")
+    f_count, d_count, m_count, e_count = cleanup_directory(target_dir, strip_all_numbers=args.strip_all_numbers)
+    print(f"Pulizia completata! Rinominati {f_count} file e {d_count} cartelle. Effettuati {m_count} spostamenti di appiattimento e rimosse {e_count} cartelle vuote.")
 
 if __name__ == "__main__":
     main()
